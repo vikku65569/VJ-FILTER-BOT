@@ -2578,15 +2578,30 @@ async def auto_filter(client, name, msg, reply_msg, ai_search, spoll=False):
             files, offset, total_results = await get_search_results(message.chat.id ,search, offset=0, filter=True)
             settings = await get_settings(message.chat.id)
             if not files:
-                if settings["spell_check"]:
-                    return await advantage_spell_chok(client, name, msg, reply_msg, ai_search)
-                else:
-                    return await reply_msg.edit_text(f"**⚠️ No File Found For Your Query - {name}**\n**Make Sure Spelling Is Correct.**")
+                await m.delete()
+                    if settings["spell_check"]:
+                        ai_sts = await message.reply_sticker(sticker=f"CAACAgQAAxkBAAEq2R9mipkiW9ACyj7oQXznwKTPHqNCXQACkBUAA3mRUZGx4GwLX9XCHgQ")
+                        st=await message.reply('<b>Ai is Cheking For Your Spelling. Please Wait.</b>') 
+                        is_misspelled = await ai_spell_check(chat_id = message.chat.id,wrong_name=search)
+                        if is_misspelled:
+                            await st.edit(f'<b>Ai Suggested <code>{is_misspelled}</code> name\nSo Im Searching for <code>{is_misspelled}</code></b>')
+                            await asyncio.sleep(2)
+                            msg.text = is_misspelled
+                            await ai_sts.delete()
+                            await st.delete()
+                            return await auto_filter(client, msg)
+                        await ai_sts.delete()
+                        await st.delete()
+                        return await advantage_spell_chok(client, msg)
+                    else:
+                        return
+            else:
+                return
         else:
-            return
-    else:
-        message = msg.message.reply_to_message  # msg will be callback query
-        search, files, offset, total_results = spoll
+            message = msg.message.reply_to_message  # msg will be callback query
+            search, files, offset, total_results = spoll
+            m=await message.reply_sticker(sticker="CAACAgIAAxkBAAEVugJljpdfkszexOUZu8hPjuPKty8ZmAACdxgAAqPjKEmMVSFmXGLogR4E",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🅿︎🅻︎🅴︎🅰︎🆂︎🅴︎  🆆︎🅰︎🅸︎🆃︎", url=CHNL_LNK)]]))
         settings = await get_settings(message.chat.id)
         await msg.message.delete()
     pre = 'filep' if settings['file_secure'] else 'file'

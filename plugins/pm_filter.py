@@ -2579,9 +2579,36 @@ async def auto_filter(client, name, msg, reply_msg, ai_search, spoll=False):
             settings = await get_settings(message.chat.id)
             if not files:
                 if settings["spell_check"]:
-                    return await advantage_spell_chok(client, name, msg, reply_msg, ai_search)
-                else:
-                    return await reply_msg.edit_text(f"**⚠️ No File Found For Your Query - {name}**\n**Make Sure Spelling Is Correct.**")
+                        return await advantage_spell_chok(client, name, msg, reply_msg, ai_search)
+                    else:
+                        # Second LibGen fallback attempt
+                        try:
+                            await reply_msg.edit_text(f"🔍 Trying alternative search for '{name}'...")
+                            results = await libgen_search(name)
+                            
+                            if results:
+                                search_key = str(uuid4())
+                                search_cache[search_key] = {
+                                    'results': results,
+                                    'query': name,
+                                    'time': datetime.now()
+                                }
+                                buttons = await create_search_buttons(results, search_key, 1)
+                                response = [
+                                    f"📚 Found {len(results)} LibGen results for <b>{name}</b>:",
+                                    f"Rᴇǫᴜᴇsᴛᴇᴅ Bʏ ☞ {message.from_user.mention if message.from_user else 'Unknown User'}",
+                                    f"Sʜᴏᴡɪɴɢ ʀᴇsᴜʟᴛs ғʀᴏᴍ ᴛʜᴇ Mᴀɢɪᴄᴀʟ Lɪʙʀᴀʀʏ",
+                                    f"📑 Page 1/{(len(results) + RESULTS_PER_PAGE - 1) // RESULTS_PER_PAGE}"
+                                ]
+                                return await reply_msg.edit("\n".join(response), reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
+                            
+                        except Exception as e:
+                            logger.error(f"Secondary LibGen error: {e}")
+
+                        # Final fallback if all attempts fail
+                        return await reply_msg.edit_text(f"**⚠️ No File Found For Your Query - {name}**\n**Make Sure Spelling Is Correct.**") 
+            
+            
         else:
             return
     else:
